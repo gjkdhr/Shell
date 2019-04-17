@@ -1,0 +1,61 @@
+在centos上安装java开发环境。
+默认的系统要么没有安装java开发环境，要么安装了openjdk的java。
+不是sun公司的jdk版本的java。
+jdk="java development kit"
+查看系统是否安装java。
+[root@test1 ~]# java -version
+java version "1.7.0_91"
+OpenJDK Runtime Environment (rhel-2.6.2.2.el6_7-x86_64 u91-b00)
+OpenJDK 64-Bit Server VM (build 24.91-b01, mixed mode)
+
+查看安装的java版本。
+[root@test1 ~]# rpm -qa|grep java
+java-1.7.0-openjdk-1.7.0.91-2.6.2.2.el6_7.x86_64
+tzdata-java-2015g-2.el6.noarch
+java-1.6.0-openjdk-1.6.0.37-1.13.9.4.el6_7.x86_64
+
+如果是安装了openjdk版的java，需要先将此卸载。
+yum remove java-1.7.0-openjdk-1.7.0.91-2.6.2.2.el6_7.x86_64
+yum remove java-1.6.0-openjdk-1.6.0.37-1.13.9.4.el6_7.x86_64
+yum remove tzdata-java-2015g-2.el6.noarch
+
+创建java的安装目录
+mkdir -pv /usr/local/java
+
+在官网找到下载包，将jdk安装包下带到该目录下，并进行解压。
+目前最新的版本在该页面下；
+http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
+tar -xvf jdk-8u65-linux-x64.tar.gz 
+
+做一个软连接，方便日后升级。
+ln -sv jdk-8u65-linux-x64 jdk
+
+修改java的环境变量
+vi /etc/profile.d/java.sh
+export JAVA_HOME=/usr/local/java/jdk/
+export CLASSPATH=.:%JAVA_HOME%/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+export PATH=$JAVA_HOME/bin/:$PATH
+
+使该环境配置文件生效
+source /etc/profile.d/java.sh
+
+这回可以查看java的版本与安装包版本是否一致。
+[root@test1 ~]# java -version
+java version "1.8.0_65"
+Java(TM) SE Runtime Environment (build 1.8.0_65-b17)
+Java HotSpot(TM) 64-Bit Server VM (build 25.65-b01, mixed mode)
+
+可以用helloworld代码测试。
+[root@test1 ~]# cat HelloWorld.
+HelloWorld.class  HelloWorld.java   
+[root@test1 ~]# cat HelloWorld.java 
+public class HelloWorld{ 
+   public static void main(String []args){ 
+       System.out.print("Hello World! \n");  
+   } 
+}
+[root@test1 ~]# javac HelloWorld.java 
+[root@test1 ~]# java HelloWorld 
+Hello World!
+
+
