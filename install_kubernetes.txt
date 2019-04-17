@@ -1,0 +1,170 @@
+1 close the firewalld and install iptables
+  close iptables rules
+2.set selinux is disables
+
+3,install ntp and update time
+ the "ntp_server.sh use 10.100.100.0 subnet"
+
+4,install the epel-release.noarch.  update the system and reboot
+ 
+
+===========================================================================================
+
+install the master node:
+
+master node ip:   10.100.100.18/centos7.zbit.com
+
+[root@centos7 ~]# yum list installed|grep kube
+kubernetes-client.x86_64               1.0.3-0.2.gitb9a88a7.el7        @extras  
+kubernetes-master.x86_64               1.0.3-0.2.gitb9a88a7.el7        @extras  
+[root@centos7 ~]# yum list installed|grep etcd
+etcd.x86_64                            2.1.1-2.el7                     @extras  
+[root@centos7 ~]# yum list installed|grep docker
+docker.x86_64                          1.8.2-10.el7.centos             @extras  
+docker-selinux.x86_64                  1.8.2-10.el7.centos             @extras 
+
+
+添加：-H tcp://0.0.0.0:2375，最终配置如下，以便以后提供远程API维护:
+[root@centos7 ~]# grep -v "^#" /etc/sysconfig/docker
+
+OPTIONS='--selinux-enabled -H tcp://0.0.0.0:2375 -H fd://' 
+
+DOCKER_CERT_PATH=/etc/docker
+
+
+
+提前说明一下，kubernetes运行pods时需要连带运行一个叫pause的镜像，
+需要先从docker.io上下载此镜像，然后用docker命令改名字：
+systemctl enable docker.service
+systemctl start docker.service
+
+docker pull docker.io/kubernetes/pause
+docker tag kubernetes/pause gcr.io/google_containers/pause:0.8.0
+docker tag gcr.io/google_containers/pause:0.8.0 gcr.io/google_containers/pause
+
+
+[root@centos7 ~]# grep -v "^#" /etc/kubernetes/apiserver 
+KUBE_API_ADDRESS="--address=0.0.0.0"
+
+KUBE_ETCD_SERVERS="--etcd_servers=http://10.100.100.18:2379"
+
+KUBE_SERVICE_ADDRESSES="--service-cluster-ip-range=10.254.0.0/16"
+
+KUBE_ADMISSION_CONTROL="--admission_control=NamespaceLifecycle,NamespaceExists,
+LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota"
+
+KUBE_API_ARGS=""
+
+
+
+[root@centos7 ~]# grep -v "^#" /etc/kubernetes/config 
+KUBE_LOGTOSTDERR="--logtostderr=true"
+
+KUBE_LOG_LEVEL="--v=0"
+
+KUBE_ALLOW_PRIV="--allow_privileged=false"
+
+KUBE_MASTER="--master=http://10.100.100.18:8080"
+
+
+
+[root@centos7 ~]# grep -v "^#" /etc/etcd/etcd.conf 
+ETCD_NAME=default
+ETCD_DATA_DIR="/var/lib/etcd/default.etcd"
+ETCD_LISTEN_CLIENT_URLS="http://0.0.0.0:2379"
+ETCD_ADVERTISE_CLIENT_URLS="http://10.100.100.18:2379"
+
+
+[root@centos7 ~]# grep -v "^#" /etc/kubernetes/controller-manager 
+
+KUBE_CONTROLLER_MANAGER_ARGS="--node-monitor-grace-period=10s --pod-eviction-timeout=10s"
+
+启动服务：
+
+[root@centos7 ~]# systemctl list-unit-files |grep etcd
+etcd.service                                enabled 
+[root@centos7 ~]# systemctl list-unit-files |grep kube
+kube-apiserver.service                      enabled 
+kube-controller-manager.service             enabled 
+kube-scheduler.service                      enabled 
+
+
+	#for SERVICES in etcd.service kube-apiserver.service kube-controller-manager.service kube-scheduler.service;
+	#do
+	#systemctl enable $SERVICE
+	#systemctl start $SERVICE
+	#done
+
+定义flannel网络配置到etcd,这个配置会推送到各个minions的flannel服务上：
+	#etcdctl mk /coreos.com/network/config '{"Network":"172.17.0.0/16"}'
+
+验证是否安装成功
+kubectl 
+
+
+
+
+==================================================================================
+
+install node
+节点安装是相同的。
+	node ip:10.100.100.12 centos1.zbit.com 
+	node ip:10.100.100.20 centos2.zbit.com
+
+yum install kubernetes-node flannel
+	
+[root@centos1 ~]# grep -v "^#" /etc/kubernetes/config 
+KUBE_LOGTOSTDERR="--logtostderr=true"
+
+KUBE_LOG_LEVEL="--v=0"
+
+KUBE_ALLOW_PRIV="--allow_privileged=false"
+
+KUBE_MASTER="--master=http://10.100.100.18:8080"
+
+
+
+[root@centos1 ~]# grep -v "^#" /etc/kubernetes/kubelet 
+
+KUBELET_ADDRESS="--address=127.0.0.1"
+
+
+KUBELET_HOSTNAME="--hostname_override=10.100.100.12"
+
+KUBELET_API_SERVER="--api_servers=http://10.100.100.18:8080"
+
+KUBELET_ARGS="--pod-infra-container-image=kubernetes/pause"
+
+
+
+[root@centos1 ~]# grep -v "^#" /etc/sysconfig/flanneld 
+
+FLANNEL_ETCD="http://10.100.100.18:2379"
+
+FLANNEL_ETCD_KEY="/coreos.com/network"
+
+
+启动服务：
+[root@centos2 ~]# systemctl list-unit-files|grep flan
+flanneld.service                            enabled 
+
+systemctl enable flanneld.service kube-proxy.service kubelet.service
+systemctl restart flanneld.service docker.service
+systemctl start kube-proxy.service kubelet.service
+
+
+当配置成功之后。
+查看ip地址
+安装了docker，默认会生成docker0网桥。安装了flannel,默认会生成flannel0网桥。
+并且docker0和flannel0网桥处于172.17.X.X 网段。
+
+
+此时查看master node：
+[root@centos7 ~]# kubectl get node
+NAME            LABELS                                 STATUS
+10.100.100.12   kubernetes.io/hostname=10.100.100.12   Ready
+10.100.100.20   kubernetes.io/hostname=10.100.100.20   Ready
+
+
+
+	
