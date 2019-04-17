@@ -1,0 +1,90 @@
+安装tomcat的基础是，必须先配置好java环境。
+
+下载tomcat安装包，最新的版本是9.0
+http://tomcat.apache.org/download-90.cgi
+
+创建tomcat的安装目录，并在安装目录下解压该文件。
+mkdir -pv /usr/local/tomcat
+cd /usr/local/tomcat
+wget -c http://apache.dataguru.cn/tomcat/tomcat-9/v9.0.0.M1/bin/apache-tomcat-9.0.0.M1.tar.gz
+tar -zxvf apache-tomcat-9.0.0.M1.tar.gz
+ln -sv apache-tomcat-9.0.0.M1 tomcat
+
+编译安装tomcat daemon服务守候程序
+cd /usr/local/tomcat/tomcat/bin
+tar -xvf commons-daemon-native.tar.gz
+cd commons-daemon-1.0.15-native-src/unix
+
+./configure --with-java=/usr/local/java/jdk/
+运行完成后会提示如下信息说明操作成功：
+*** Writing output files ***
+configure: creating ./config.status
+config.status: creating Makefile
+config.status: creating Makedefs
+config.status: creating native/Makefile
+*** All done ***
+Now you can issue "make"
+
+执行make后，在该目录下生成一个jsvc的文件，将该文件复制到tomcat的bin目录。
+ cp jsvc /usr/local/tomcat/tomcat/bin/
+
+在tomcat的bin目录下，有一个daemon.sh 
+这个文件就是启动和关闭tomcat服务的后台守护进程。
+
+
+修改daemom的java环境变量 
+# Set JAVA_HOME to working JDK or JRE
+JAVA_HOME=/usr/local/java/jdk
+
+添加用户tomcat或其他用户运行tomcat，防止别人攻破网站，进而获取系统权限。
+useradd -M tomcat
+chown -R tomcat /usr/local/tomcat/tomcat/
+
+使tomcat下的所有脚本都可以执行。
+chmod +x /usr/local/tomcat/tomcat/bin/
+
+启动tomcat后台进程，
+[root@test1 ~]# /usr/local/tomcat/tomcat/bin/daemon.sh 
+Unknown command: `'
+Usage: daemon.sh ( commands ... )
+commands:
+  run               Start Tomcat without detaching from console
+  start             Start Tomcat
+  stop              Stop Tomcat
+  version           What version of commons daemon and Tomcat
+                    are you running?
+[root@test1 ~]# /usr/local/tomcat/tomcat/bin/daemon.sh start
+
+[root@test1 lib]# netstat -antple|grep 8080
+tcp        0      0 :::8080                     :::*                        LISTEN      501        793737     14102/jsvc.exec
+
+访问端口8080.测试。
+http://10.100.62.120:8080/
+
+最后将tomcat设置为自动启动。
+ln -sv /usr/local/tomcat/tomcat/bin/daemom.sh /etc/init.d/tomcat 
+然后把tomcat加入到开机启动
+先停掉tomcat，然后启动
+/etc/init.d/tomcat stop
+/etc/init.d/tomcat start
+
+将该服务加入到系统中
+chkconfig --add tomcat
+chkconfig tomcat on
+chkconfig --list tomcat
+
+如果需要在一台主机上配置多个tomcat，需要修改不同的端口。
+将解压后的tomcat安装目录复制一份
+cd /usr/local/tomcat
+cp tomcat tomcat1
+
+然后修改tomcat1文件中
+1，创建不同的用户运行;
+2,修改java的主目录。
+3,修改tomcat的端口。在/usr/local/tomcat/tomcat/conf/server.xml 
+中找到8080端口，并修改。
+ <Connector port="8080" protocol="HTTP/1.1"
+               connectionTimeout="20000"
+               redirectPort="8443" />
+
+就成功了
