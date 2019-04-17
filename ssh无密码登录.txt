@@ -1,0 +1,18 @@
+A为本地主机(既用于控制其他主机的机器)
+B为远程主机(既被控制的机器server)，假如ip为10.100.62.121
+
+1，首先在A主机上生成私钥id_rsa和公钥id_rsa.pub，
+并将公钥发送到B主机上。
+ssh-keygen -t rsa
+scp /root/.ssh/id_rsa.pub root@10.100.62.121
+
+2,利用ssh命令远程在B主机上创建.ssh目录（若该目录不存在，则创建。该目录的权限为700，只允许当前所属用户进行读取），
+并在该目录下创建文件authorized_keys。（若该文件不存在，则创建。该文件的最好设置为600，）
+然后将A主机的公钥id_rsa.pub追加到该文件中，
+ssh root@10.100.62.121 "mkdir -pv /root/.ssh;touch /root/.ssh/authorized_keys; \
+cat /root/id_rsa.pub >> /root/.ssh/authorized_keys;chmod 600 /root/.ssh/authorized_keys; \
+chmod 700 /root/.ssh;rm -rf /root/id_rsa.pub;"
+
+
+3,若成功，则A主机就可以无密码远程登录。
+ssh root@10.100.62.193
