@@ -1,0 +1,79 @@
+#platform=x86, AMD64, or Intel EM64T
+#version=DEVEL
+# Install OS instead of upgrade
+install
+# Keyboard layouts
+keyboard 'us'
+# Root password
+rootpw --iscrypted $1$Mo935m1K$QN83a8.8gBZ59KFzF4clO1
+# Use network installation
+url --url="http://192.168.110.57/cobbler/ks_mirror/CentOS7.6-x86_64"
+# System language
+lang en_US
+# System authorization information
+auth  --useshadow  --passalgo=sha512
+# Use graphical install
+graphical
+firstboot --disable
+# SELinux configuration
+selinux --disabled
+# Do not configure the X Window System
+skipx
+
+# Installation logging level
+logging --level=info
+
+# Firewall configuration
+firewall --disabled
+# Network information
+network  --bootproto=static --device=ens192 --gateway=192.168.110.254 --ip=192.168.110.28 --nameserver=192.168.201.207,114.114.114.114 --netmask=255.255.255.0 --onboot=on
+# Reboot after installation
+reboot
+# System timezone
+timezone Asia/Shanghai
+# System bootloader configuration
+bootloader --location=mbr
+# Clear the Master Boot Record
+zerombr
+# Partition clearing information
+clearpart --all --initlabel
+# Disk partitioning information
+part /boot --fstype="xfs" --size=200
+part / --fstype="xfs" --grow --size=1
+part swap --fstype="swap" --size=2048
+
+# Stop Unused Service
+#services  --disabled  kdump,portreserve
+services  --disabled  kdump
+
+
+# Install System Package.
+%packages
+@base
+@core
+@Development Tools
+net-tools
+gawk
+coreutils
+telnet
+nc
+tree
+nmap
+sysstat
+lrzsz
+dos2unix
+telnet
+wget
+vim-enhanced
+bash-completion
+%end
+
+# Set Hostname and /etc/hosts
+%post
+#!/bin/bash
+Server_Name="YW-Test-Server"
+hostnamectl set-hostname  ${Server_Name}
+hostnamectl set-hostname --static ${Server_Name}
+IP_Address=`ifconfig ens192|grep inet|grep -v inet6|awk '{print $2}'|tr -d "addr:"`
+echo -e "${IP_Address}\t${Server_Name}" >> /etc/hosts
+%end
