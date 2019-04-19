@@ -26,7 +26,13 @@ logging --level=info
 # Firewall configuration
 firewall --disabled
 # Network information
+#network  --bootproto=static --device=em1 --ip=10.10.13.244 --netmask=255.255.254.0 --onboot=on
+#network  --bootproto=static --device=em2 --ip=10.10.15.244 --netmask=255.255.254.0 --onboot=on
+#network  --bootproto=static --device=em3 --ip=192.168.201.244 --netmask=255.255.254.0 --gateway=192.168.200.254 --onboot=on
+#network  --bootproto=dhcp --device=em4 --onboot=on
 network  --bootproto=static --device=ens192 --gateway=192.168.110.254 --ip=192.168.110.28 --nameserver=192.168.201.207,114.114.114.114 --netmask=255.255.255.0 --onboot=on
+
+
 # Reboot after installation
 reboot
 # System timezone
@@ -61,8 +67,6 @@ tree
 nmap
 sysstat
 lrzsz
-dos2unix
-telnet
 wget
 vim-enhanced
 bash-completion
